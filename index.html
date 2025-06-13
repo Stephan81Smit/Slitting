@@ -4,14 +4,15 @@
     <meta charset="UTF-8">
     <title>Coil Slitting Optimization Calculator</title>
     <style>
-        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        .container { max-width: 1000px; margin: 20px auto; padding: 20px; }
         .input-group { margin-bottom: 15px; }
         label { display: inline-block; width: 200px; }
-        input { width: 120px; padding: 5px; }
+        input { width: 100px; padding: 5px; }
         table { width: 100%; margin: 20px 0; border-collapse: collapse; }
         th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
         button { padding: 8px 15px; margin: 5px; cursor: pointer; }
         .result { margin-top: 20px; padding: 15px; background: #f5f5f5; }
+        th:nth-child(3) { min-width: 200px; }
     </style>
 </head>
 <body>
@@ -33,13 +34,15 @@
             <thead>
                 <tr>
                     <th>Slit Size (mm)</th>
-                    <th>Max Quantity <span style="font-weight:normal;">(leave blank for unlimited)</span></th>
+                    <th>Min Quantity</th>
+                    <th>Max Quantity <span style="font-weight:normal;">(blank = unlimited)</span></th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><input type="number" class="slit-size" value="196"></td>
+                    <td><input type="number" class="min-qty"></td>
                     <td><input type="number" class="max-qty"></td>
                     <td><button onclick="removeRow(this)">Remove</button></td>
                 </tr>
@@ -58,6 +61,7 @@
             const newRow = document.createElement('tr');
             newRow.innerHTML = `
                 <td><input type="number" class="slit-size"></td>
+                <td><input type="number" class="min-qty"></td>
                 <td><input type="number" class="max-qty"></td>
                 <td><button onclick="removeRow(this)">Remove</button></td>
             `;
@@ -69,34 +73,40 @@
         }
 
         function calculateOptimization() {
-            // Get input values
             const coilWidth = parseFloat(document.getElementById('coilWidth').value);
             const totalTrim = parseFloat(document.getElementById('totalTrim').value);
             const availableWidth = coilWidth - totalTrim;
 
-            // Collect slit sizes and handle empty max quantities
+            // Collect slit data
             const slitInputs = Array.from(document.querySelectorAll('.slit-size'));
+            const minQtyInputs = Array.from(document.querySelectorAll('.min-qty'));
             const maxQtyInputs = Array.from(document.querySelectorAll('.max-qty'));
             
             const slits = slitInputs.map((input, index) => {
                 const size = parseFloat(input.value) || 0;
-                const maxQtyInput = maxQtyInputs[index].value;
-                let maxQty;
-                if (maxQtyInput === "" || isNaN(parseFloat(maxQtyInput))) {
-                    // Unlimited: set to max possible that can fit
+                const minQty = parseFloat(minQtyInputs[index].value) || 0;
+                let maxQty = parseFloat(maxQtyInputs[index].value);
+                
+                // Handle unlimited max quantity
+                if (isNaN(maxQty)) {
                     maxQty = size > 0 ? Math.floor(availableWidth / size) : 0;
-                } else {
-                    maxQty = parseInt(maxQtyInput, 10);
                 }
-                return { size, maxQty };
-            }).filter(s => s.size > 0 && s.maxQty > 0);
+                
+                // Ensure valid quantity range
+                maxQty = Math.max(minQty, maxQty);
 
-            if (slits.length === 0) {
-                document.getElementById('results').innerHTML = "Please enter at least one valid slit size.";
+                return { size, minQty, maxQty };
+            }).filter(s => s.size > 0);
+
+            // Check minimum requirements
+            const totalMinWidth = slits.reduce((sum, slit) => sum + (slit.minQty * slit.size), 0);
+            if (totalMinWidth > availableWidth) {
+                document.getElementById('results').innerHTML = 
+                    "Error: Minimum requirements exceed available width";
                 return;
             }
 
-            // Optimization algorithm (brute force, suitable for small number of slit sizes)
+            // Optimization algorithm
             let bestCombination = [];
             let minWaste = availableWidth;
             let maxUsed = 0;
@@ -113,10 +123,10 @@
                 }
 
                 const slit = slits[index];
-                for (let qty = 0; qty <= slit.maxQty; qty++) {
-                    current[index] = qty;
+                for (let qty = slit.minQty; qty <= slit.maxQty; qty++) {
                     const newWidth = usedWidth + (qty * slit.size);
                     if (newWidth <= availableWidth) {
+                        current[index] = qty;
                         tryCombinations(index + 1, current, newWidth);
                     }
                 }
@@ -126,21 +136,25 @@
 
             // Display results
             const resultsDiv = document.getElementById('results');
-            if (bestCombination.length > 0 && maxUsed > 0) {
+            if (bestCombination.length > 0) {
                 let html = `<h3>Optimal Slitting Combination</h3>`;
                 html += `<p>Available Width: ${availableWidth}mm</p>`;
                 html += `<p>Used Width: ${maxUsed}mm</p>`;
                 html += `<p>Waste: ${minWaste}mm</p>`;
-                html += `<table><tr><th>Slit Size (mm)</th><th>Quantity</th></tr>`;
+                html += `<table><tr><th>Slit Size</th><th>Quantity</th><th>Range</th></tr>`;
                 
                 slits.forEach((slit, index) => {
-                    html += `<tr><td>${slit.size}</td><td>${bestCombination[index]}</td></tr>`;
+                    html += `<tr>
+                        <td>${slit.size}mm</td>
+                        <td>${bestCombination[index]}</td>
+                        <td>${slit.minQty}-${slit.maxQty}</td>
+                    </tr>`;
                 });
                 
                 html += `</table>`;
                 resultsDiv.innerHTML = html;
             } else {
-                resultsDiv.innerHTML = "No valid combination found.";
+                resultsDiv.innerHTML = "No valid combination found";
             }
         }
     </script>
