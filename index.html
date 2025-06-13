@@ -2,34 +2,45 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Coil Slitting Optimization Calculator</title>
+    <title>Freestock Slitting Calculator</title>
     <style>
+        body { font-family: Arial, sans-serif; }
         .container { max-width: 1000px; margin: 20px auto; padding: 20px; }
         .input-group { margin-bottom: 15px; }
         label { display: inline-block; width: 200px; }
-        input { width: 100px; padding: 5px; }
+        input { width: 150px; padding: 5px; }
         table { width: 100%; margin: 20px 0; border-collapse: collapse; }
         th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
-        button { padding: 8px 15px; margin: 5px; cursor: pointer; }
+        button { padding: 8px 15px; margin: 5px 5px 5px 0; cursor: pointer; }
         .result { margin-top: 20px; padding: 15px; background: #f5f5f5; }
         .summary-table { width: 100%; max-width: 500px; margin-bottom: 20px; }
         .summary-table th, .summary-table td { border: none; text-align: left; padding: 6px 8px; }
         .details-table { width: 100%; max-width: 500px; margin-top: 10px; }
         .details-table th, .details-table td { text-align: left; }
         .highlight { font-weight: bold; color: #2a5d84; }
+        h1 { text-align: center; color: #1a3c5a; margin-bottom: 30px; }
+        @media print {
+            body { background: #fff; }
+            button, .input-group button, .add-remove-btn { display: none !important; }
+            input, select, textarea { border: none; background: transparent; }
+            .container { box-shadow: none; }
+            .result { background: none; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Coil Slitting Optimizer</h2>
-        
+        <h1>Freestock Slitting Calculator</h1>
         <div class="input-group">
-            <label>Coil Width (mm):</label>
+            <label for="coilNo">Coil No.:</label>
+            <input type="text" id="coilNo" placeholder="Enter Coil Number">
+        </div>
+        <div class="input-group">
+            <label for="coilWidth">Coil Width (mm):</label>
             <input type="number" id="coilWidth" value="1225">
         </div>
-        
         <div class="input-group">
-            <label>Total Trim (mm):</label>
+            <label for="totalTrim">Total Trim (mm):</label>
             <input type="number" id="totalTrim" value="16">
         </div>
 
@@ -48,13 +59,14 @@
                     <td><input type="number" class="slit-size" value="196"></td>
                     <td><input type="number" class="min-qty"></td>
                     <td><input type="number" class="max-qty"></td>
-                    <td><button onclick="removeRow(this)">Remove</button></td>
+                    <td><button class="add-remove-btn" onclick="removeRow(this)">Remove</button></td>
                 </tr>
             </tbody>
         </table>
         
-        <button onclick="addSlitRow()">Add Slit Size</button>
+        <button class="add-remove-btn" onclick="addSlitRow()">Add Slit Size</button>
         <button onclick="calculateOptimization()">Calculate</button>
+        <button onclick="window.print()">Print to PDF</button>
 
         <div id="results" class="result"></div>
     </div>
@@ -67,7 +79,7 @@
                 <td><input type="number" class="slit-size"></td>
                 <td><input type="number" class="min-qty"></td>
                 <td><input type="number" class="max-qty"></td>
-                <td><button onclick="removeRow(this)">Remove</button></td>
+                <td><button class="add-remove-btn" onclick="removeRow(this)">Remove</button></td>
             `;
             tbody.appendChild(newRow);
         }
@@ -77,6 +89,7 @@
         }
 
         function calculateOptimization() {
+            const coilNo = document.getElementById('coilNo').value.trim();
             const coilWidth = parseFloat(document.getElementById('coilWidth').value);
             const totalTrim = parseFloat(document.getElementById('totalTrim').value);
             const availableWidth = coilWidth - totalTrim;
@@ -149,6 +162,10 @@
                     <h3>Optimal Slitting Combination</h3>
                     <table class="summary-table">
                         <tr>
+                            <th>Coil No.:</th>
+                            <td class="highlight">${coilNo ? coilNo : '-'}</td>
+                        </tr>
+                        <tr>
                             <th>Original Coil Width:</th>
                             <td class="highlight">${coilWidth} mm</td>
                         </tr>
@@ -198,4 +215,5 @@
     </script>
 </body>
 </html>
+
 
