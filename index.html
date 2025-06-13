@@ -5,7 +5,7 @@
   <title>Freestock Slitting Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
+     body {
       font-family: 'Segoe UI', Arial, sans-serif;
       background: #f8f9fa;
       margin: 0;
@@ -24,23 +24,32 @@
       color: #2d3e50;
       margin-bottom: 10px;
     }
+    .instructions {
+      text-align: center;
+      color: #444;
+      margin-bottom: 28px;
+    }
+    h2 {
+      color: #1b5fc6;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 4px;
+    }
     h3 {
       color: #2d3e50;
       margin-bottom: 10px;
-      margin-top: 24px;
+      margin-top: 0;
       font-size: 1.1em;
       font-weight: 600;
     }
-    .input-group {
-      margin-bottom: 18px;
-      position: relative;
+    .segment {
+      margin-bottom: 32px;
     }
     label {
       display: block;
       margin: 12px 0 6px;
       font-weight: 600;
     }
-    input[type="number"], input[type="text"] {
+    input[type="number"], select {
       width: 100%;
       padding: 12px;
       font-size: 1.1em;
@@ -49,123 +58,120 @@
       box-sizing: border-box;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    input[type="number"].error, input[type="text"].error {
-      border-color: #e74c3c !important;
-      box-shadow: 0 0 5px rgba(231,76,60,0.5);
+    .row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
     }
-    .error-message {
-      color: #e74c3c;
-      font-size: 0.85em;
-      margin-top: 4px;
-      display: block;
+    .col {
+      flex: 1;
+      min-width: 140px;
     }
-    table {
-      width: 100%;
-      margin: 20px 0 0 0;
-      border-collapse: collapse;
+    .results {
       background: #f1f3f6;
       border-radius: 8px;
-      overflow: hidden;
+      margin-top: 18px;
+      padding: 18px;
     }
-    th, td {
-      padding: 10px 8px;
-      border: 1px solid #eee;
-      text-align: left;
+    .result-item {
+      margin: 8px 0;
     }
-    th {
-      background: #f8f9fa;
-      color: #2d3e50;
-      font-weight: 600;
+    .result-label {
+      font-weight: 500;
     }
-    .drag-handle {
-      cursor: move;
-      font-weight: bold;
-      color: #1b5fc6;
-      text-align: center;
-      font-size: 1.2em;
-    }
-    .drag-over {
-      outline: 2px dashed #1b5fc6;
-    }
-    button, .add-remove-btn {
-      display: inline-block;
+    button {
+      display: block;
       background: #2d7ff9;
       color: #fff;
       border: none;
-      padding: 14px 0;
+      padding: 18px 0;
       border-radius: 5px;
-      font-size: 1.1em;
+      font-size: 1.2em;
       cursor: pointer;
-      width: auto;
-      min-width: 120px;
-      margin: 10px 10px 0 0;
+      width: 100%;
+      margin: 24px 0 0 0;
       font-weight: bold;
       letter-spacing: 1px;
       box-shadow: 0 2px 6px rgba(44,127,249,0.07);
       transition: background 0.2s;
     }
-    button:hover, .add-remove-btn:hover {
+    button:hover {
       background: #1b5fc6;
     }
-    .result {
-      background: #f1f3f6;
-      border-radius: 8px;
-      margin-top: 18px;
-      padding: 18px;
-      font-size: 1.05em;
+    .button-row {
+      display: flex;
+      gap: 16px;
     }
-    .summary-table, .details-table {
-      width: 100%;
-      max-width: 700px;
-      margin: 14px 0 0 0;
-      border-collapse: collapse;
-      background: none;
+    .dual-section {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
     }
-    .summary-table th, .summary-table td,
-    .details-table th, .details-table td {
-      border: none;
-      text-align: left;
-      padding: 8px 8px;
+    .dual-col {
+      flex: 1 1 380px;
+      min-width: 320px;
     }
-    .summary-table th {
-      color: #444;
-      font-weight: 600;
-      width: 220px;
-      padding-right: 0;
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
     }
-    .summary-table .highlight {
-      color: #1b5fc6;
-      font-weight: bold;
+    .toggle-row label {
+      margin: 0 8px 0 0;
+      font-weight: 400;
+      cursor: pointer;
+      user-select: none;
     }
-    .details-table th {
-      color: #2d3e50;
-      font-weight: 600;
-      padding-bottom: 4px;
+    .error-message {
+      color: #e74c3c;
+      font-size: 0.85em;
+      margin-top: 4px;
+      display: none;
     }
-    .details-table td {
-      color: #444;
+    input.invalid, select.invalid {
+      border-color: #e74c3c !important;
+      box-shadow: 0 0 5px rgba(231,76,60,0.5);
+    }
+    input.valid, select.valid {
+      border-color: #27ae60 !important;
+      box-shadow: 0 0 5px rgba(39,174,96,0.5);
+    }
+    .hidden-field {
+      display: none !important;
     }
     @media (max-width: 600px) {
       .container {
         padding: 12px;
       }
-      table, .summary-table, .details-table {
-        font-size: 0.95em;
+      .row, .button-row, .dual-section {
+        flex-direction: column;
+        gap: 12px;
       }
-      button, .add-remove-btn {
+      .col, .dual-col {
+        min-width: 100%;
+        width: 100%;
+        margin-bottom: 14px;
+      }
+      input[type="number"], select {
         font-size: 1em;
-        padding: 12px 0;
-        min-width: 100px;
+        padding: 16px 8px;
+      }
+      button {
+        font-size: 1em;
+        padding: 16px 0;
       }
       h1 {
         font-size: 1.6em;
       }
-      h3 {
+      h2 {
         font-size: 1.2em;
       }
-      .summary-table th {
-        width: 120px;
-      }
+    }
+    .input-group {
+      position: relative;
+      margin-bottom: 12px;
     }
   </style>
 </head>
