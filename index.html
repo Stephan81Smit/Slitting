@@ -12,7 +12,11 @@
         th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
         button { padding: 8px 15px; margin: 5px; cursor: pointer; }
         .result { margin-top: 20px; padding: 15px; background: #f5f5f5; }
-        th:nth-child(3) { min-width: 200px; }
+        .summary-table { width: 100%; max-width: 500px; margin-bottom: 20px; }
+        .summary-table th, .summary-table td { border: none; text-align: left; padding: 6px 8px; }
+        .details-table { width: 100%; max-width: 500px; margin-top: 10px; }
+        .details-table th, .details-table td { text-align: left; }
+        .highlight { font-weight: bold; color: #2a5d84; }
     </style>
 </head>
 <body>
@@ -134,24 +138,58 @@
 
             tryCombinations();
 
+            // Calculate percentages
+            const usedWidthPercent = coilWidth > 0 ? ((maxUsed / coilWidth) * 100).toFixed(2) : "0.00";
+            const wastePercent = coilWidth > 0 ? ((minWaste / coilWidth) * 100).toFixed(2) : "0.00";
+
             // Display results
             const resultsDiv = document.getElementById('results');
             if (bestCombination.length > 0) {
-                let html = `<h3>Optimal Slitting Combination</h3>`;
-                html += `<p>Available Width: ${availableWidth}mm</p>`;
-                html += `<p>Used Width: ${maxUsed}mm</p>`;
-                html += `<p>Waste: ${minWaste}mm</p>`;
-                html += `<table><tr><th>Slit Size</th><th>Quantity</th><th>Range</th></tr>`;
-                
+                let html = `
+                    <h3>Optimal Slitting Combination</h3>
+                    <table class="summary-table">
+                        <tr>
+                            <th>Original Coil Width:</th>
+                            <td class="highlight">${coilWidth} mm</td>
+                        </tr>
+                        <tr>
+                            <th>Total Trim:</th>
+                            <td>${totalTrim} mm</td>
+                        </tr>
+                        <tr>
+                            <th>Available Width:</th>
+                            <td>${availableWidth} mm</td>
+                        </tr>
+                        <tr>
+                            <th>Used Width:</th>
+                            <td class="highlight">${maxUsed} mm</td>
+                            <td><span style="color: #2a5d84;">(${usedWidthPercent}%)</span></td>
+                        </tr>
+                        <tr>
+                            <th>Waste:</th>
+                            <td class="highlight">${minWaste} mm</td>
+                            <td><span style="color: #b22222;">(${wastePercent}%)</span></td>
+                        </tr>
+                    </table>
+                    <table class="details-table">
+                        <thead>
+                            <tr>
+                                <th>Slit Size (mm)</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
                 slits.forEach((slit, index) => {
                     html += `<tr>
-                        <td>${slit.size}mm</td>
+                        <td>${slit.size}</td>
                         <td>${bestCombination[index]}</td>
-                        <td>${slit.minQty}-${slit.maxQty}</td>
                     </tr>`;
                 });
-                
-                html += `</table>`;
+                html += `
+                        </tbody>
+                    </table>
+                `;
                 resultsDiv.innerHTML = html;
             } else {
                 resultsDiv.innerHTML = "No valid combination found";
@@ -160,3 +198,4 @@
     </script>
 </body>
 </html>
+
