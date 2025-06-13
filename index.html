@@ -13,15 +13,18 @@
         th, td { padding: 8px; border: 1px solid #ddd; text-align: left; }
         button { padding: 8px 15px; margin: 5px 5px 5px 0; cursor: pointer; }
         .result { margin-top: 20px; padding: 15px; background: #f5f5f5; }
-        .summary-table { width: 100%; max-width: 500px; margin-bottom: 20px; }
+        .summary-table { width: 100%; max-width: 600px; margin-bottom: 20px; }
         .summary-table th, .summary-table td { border: none; text-align: left; padding: 6px 8px; }
-        .details-table { width: 100%; max-width: 500px; margin-top: 10px; }
+        .details-table { width: 100%; max-width: 700px; margin-top: 10px; }
         .details-table th, .details-table td { text-align: left; }
         .highlight { font-weight: bold; color: #2a5d84; }
         h1 { text-align: center; color: #1a3c5a; margin-bottom: 30px; }
+        .error { border: 2px solid #ff4444 !important; }
+        .error-message { color: #b22222; font-size: 0.95em; margin-left: 10px; }
+        .drag-handle { cursor: move; font-weight: bold; }
+        .drag-over { outline: 2px dashed #1a3c5a; }
         @media print {
-            body { background: #fff; }
-            button, .input-group button, .add-remove-btn { display: none !important; }
+            button, .add-remove-btn, .drag-handle { display: none !important; }
             input, select, textarea { border: none; background: transparent; }
             .container { box-shadow: none; }
             .result { background: none; }
@@ -33,32 +36,46 @@
         <h1>Freestock Slitting Calculator</h1>
         <div class="input-group">
             <label for="coilNo">Coil No.:</label>
-            <input type="text" id="coilNo" placeholder="Enter Coil Number">
+            <input type="text" id="coilNo" placeholder="Enter Coil Number" aria-label="Coil Number">
         </div>
         <div class="input-group">
             <label for="coilWidth">Coil Width (mm):</label>
-            <input type="number" id="coilWidth" value="1225">
+            <input type="number" id="coilWidth" value="1225" min="1" required aria-label="Coil Width">
+            <span class="error-message" id="coilWidthError"></span>
         </div>
         <div class="input-group">
             <label for="totalTrim">Total Trim (mm):</label>
-            <input type="number" id="totalTrim" value="16">
+            <input type="number" id="totalTrim" value="16" min="0" required aria-label="Total Trim">
+            <span class="error-message" id="totalTrimError"></span>
+        </div>
+        <div class="input-group">
+            <label for="materialThickness">Material Thickness (mm):</label>
+            <input type="number" id="materialThickness" step="0.01" min="0.01" required aria-label="Material Thickness">
+            <span class="error-message" id="materialThicknessError"></span>
+        </div>
+        <div class="input-group">
+            <label for="materialDensity">Density (kg/m³):</label>
+            <input type="number" id="materialDensity" value="7850" min="1" required aria-label="Material Density">
+            <span class="error-message" id="materialDensityError"></span>
         </div>
 
         <h3>Slit Sizes</h3>
         <table id="slitTable">
             <thead>
                 <tr>
+                    <th></th>
                     <th>Slit Size (mm)</th>
-                    <th>Min Quantity</th>
-                    <th>Max Quantity <span style="font-weight:normal;">(blank = unlimited)</span></th>
+                    <th>Min Qty</th>
+                    <th>Max Qty</th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td><input type="number" class="slit-size" value="196"></td>
-                    <td><input type="number" class="min-qty"></td>
-                    <td><input type="number" class="max-qty"></td>
+                <tr draggable="true">
+                    <td class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">☰</td>
+                    <td><input type="number" class="slit-size" value="196" min="1" required aria-label="Slit Size"></td>
+                    <td><input type="number" class="min-qty" min="0" aria-label="Min Quantity"></td>
+                    <td><input type="number" class="max-qty" min="0" aria-label="Max Quantity"></td>
                     <td><button class="add-remove-btn" onclick="removeRow(this)">Remove</button></td>
                 </tr>
             </tbody>
@@ -67,61 +84,150 @@
         <button class="add-remove-btn" onclick="addSlitRow()">Add Slit Size</button>
         <button onclick="calculateOptimization()">Calculate</button>
         <button onclick="window.print()">Print to PDF</button>
+        <button onclick="clearAllSlits()">Clear All Slits</button>
+        <button onclick="exportToCSV()">Export to CSV</button>
 
-        <div id="results" class="result"></div>
+        <div id="results" class="result" tabindex="0" aria-live="polite"></div>
     </div>
 
     <script>
+        // Drag-and-drop functionality
+        let draggedRow = null;
+        document.addEventListener('dragstart', function(e) {
+            if (e.target.classList.contains('drag-handle')) {
+                draggedRow = e.target.closest('tr');
+                draggedRow.classList.add('dragging');
+            }
+        });
+        document.addEventListener('dragend', function() {
+            if (draggedRow) {
+                draggedRow.classList.remove('dragging');
+                draggedRow = null;
+            }
+        });
+        document.querySelector('#slitTable tbody').addEventListener('dragover', function(e) {
+            e.preventDefault();
+            const afterElement = getDragAfterElement(this, e.clientY);
+            if (afterElement == null) {
+                this.appendChild(draggedRow);
+            } else {
+                this.insertBefore(draggedRow, afterElement);
+            }
+        });
+        function getDragAfterElement(container, y) {
+            const rows = [...container.querySelectorAll('tr:not(.dragging)')];
+            return rows.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // Add, remove, clear slit rows
         function addSlitRow() {
             const tbody = document.querySelector('#slitTable tbody');
             const newRow = document.createElement('tr');
+            newRow.setAttribute('draggable', 'true');
             newRow.innerHTML = `
-                <td><input type="number" class="slit-size"></td>
-                <td><input type="number" class="min-qty"></td>
-                <td><input type="number" class="max-qty"></td>
+                <td class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">☰</td>
+                <td><input type="number" class="slit-size" min="1" required aria-label="Slit Size"></td>
+                <td><input type="number" class="min-qty" min="0" aria-label="Min Quantity"></td>
+                <td><input type="number" class="max-qty" min="0" aria-label="Max Quantity"></td>
                 <td><button class="add-remove-btn" onclick="removeRow(this)">Remove</button></td>
             `;
             tbody.appendChild(newRow);
         }
-
         function removeRow(btn) {
             btn.closest('tr').remove();
         }
+        function clearAllSlits() {
+            const tbody = document.querySelector('#slitTable tbody');
+            tbody.innerHTML = `
+                <tr draggable="true">
+                    <td class="drag-handle" title="Drag to reorder" aria-label="Drag to reorder">☰</td>
+                    <td><input type="number" class="slit-size" min="1" required aria-label="Slit Size"></td>
+                    <td><input type="number" class="min-qty" min="0" aria-label="Min Quantity"></td>
+                    <td><input type="number" class="max-qty" min="0" aria-label="Max Quantity"></td>
+                    <td><button class="add-remove-btn" onclick="removeRow(this)">Remove</button></td>
+                </tr>
+            `;
+        }
 
+        // Real-time input validation
+        document.addEventListener('input', function(e) {
+            if (e.target.matches('input')) validateInputs();
+        });
+
+        function validateInputs() {
+            let isValid = true;
+            // Main fields
+            [
+                { id: 'coilWidth', min: 1 },
+                { id: 'totalTrim', min: 0 },
+                { id: 'materialThickness', min: 0.01 },
+                { id: 'materialDensity', min: 1 }
+            ].forEach(field => {
+                const el = document.getElementById(field.id);
+                const errorEl = document.getElementById(field.id + 'Error');
+                const value = parseFloat(el.value);
+                if (isNaN(value) || value < field.min) {
+                    el.classList.add('error');
+                    errorEl.textContent = `Invalid value (min ${field.min})`;
+                    isValid = false;
+                } else {
+                    el.classList.remove('error');
+                    errorEl.textContent = '';
+                }
+            });
+            // Slit rows
+            document.querySelectorAll('#slitTable tbody tr').forEach(row => {
+                const slitSize = row.querySelector('.slit-size');
+                const minQty = row.querySelector('.min-qty');
+                const maxQty = row.querySelector('.max-qty');
+                slitSize.classList.remove('error');
+                minQty.classList.remove('error');
+                maxQty.classList.remove('error');
+                if (!slitSize.value || parseFloat(slitSize.value) < 1) {
+                    slitSize.classList.add('error');
+                    isValid = false;
+                }
+                const minVal = parseFloat(minQty.value) || 0;
+                const maxVal = parseFloat(maxQty.value) || Infinity;
+                if (minVal > maxVal) {
+                    minQty.classList.add('error');
+                    maxQty.classList.add('error');
+                    isValid = false;
+                }
+            });
+            return isValid;
+        }
+
+        // Main calculation and results display
         function calculateOptimization() {
+            if (!validateInputs()) {
+                document.getElementById('results').innerHTML = '<span class="error-message">Please correct highlighted errors before calculating.</span>';
+                return;
+            }
             const coilNo = document.getElementById('coilNo').value.trim();
             const coilWidth = parseFloat(document.getElementById('coilWidth').value);
             const totalTrim = parseFloat(document.getElementById('totalTrim').value);
             const availableWidth = coilWidth - totalTrim;
+            const thickness = parseFloat(document.getElementById('materialThickness').value);
+            const density = parseFloat(document.getElementById('materialDensity').value);
 
             // Collect slit data
-            const slitInputs = Array.from(document.querySelectorAll('.slit-size'));
-            const minQtyInputs = Array.from(document.querySelectorAll('.min-qty'));
-            const maxQtyInputs = Array.from(document.querySelectorAll('.max-qty'));
-            
-            const slits = slitInputs.map((input, index) => {
-                const size = parseFloat(input.value) || 0;
-                const minQty = parseFloat(minQtyInputs[index].value) || 0;
-                let maxQty = parseFloat(maxQtyInputs[index].value);
-                
-                // Handle unlimited max quantity
-                if (isNaN(maxQty)) {
-                    maxQty = size > 0 ? Math.floor(availableWidth / size) : 0;
-                }
-                
-                // Ensure valid quantity range
+            const slits = Array.from(document.querySelectorAll('#slitTable tbody tr')).map(row => {
+                const size = parseFloat(row.querySelector('.slit-size').value);
+                const minQty = parseFloat(row.querySelector('.min-qty').value) || 0;
+                let maxQty = parseFloat(row.querySelector('.max-qty').value);
+                maxQty = isNaN(maxQty) ? Math.floor(availableWidth / size) : maxQty;
                 maxQty = Math.max(minQty, maxQty);
-
                 return { size, minQty, maxQty };
             }).filter(s => s.size > 0);
-
-            // Check minimum requirements
-            const totalMinWidth = slits.reduce((sum, slit) => sum + (slit.minQty * slit.size), 0);
-            if (totalMinWidth > availableWidth) {
-                document.getElementById('results').innerHTML = 
-                    "Error: Minimum requirements exceed available width";
-                return;
-            }
 
             // Optimization algorithm
             let bestCombination = [];
@@ -129,78 +235,78 @@
             let maxUsed = 0;
 
             function tryCombinations(index = 0, current = [], usedWidth = 0) {
-                if (index === slits.length) {
+                if(index === slits.length) {
                     const waste = availableWidth - usedWidth;
-                    if (waste >= 0 && (waste < minWaste || (waste === minWaste && usedWidth > maxUsed))) {
+                    if(waste >= 0 && (waste < minWaste || (waste === minWaste && usedWidth > maxUsed))) {
                         minWaste = waste;
                         maxUsed = usedWidth;
                         bestCombination = [...current];
                     }
                     return;
                 }
-
                 const slit = slits[index];
-                for (let qty = slit.minQty; qty <= slit.maxQty; qty++) {
+                for(let qty = slit.minQty; qty <= slit.maxQty; qty++) {
                     const newWidth = usedWidth + (qty * slit.size);
-                    if (newWidth <= availableWidth) {
+                    if(newWidth <= availableWidth) {
                         current[index] = qty;
                         tryCombinations(index + 1, current, newWidth);
                     }
                 }
             }
-
             tryCombinations();
 
-            // Calculate percentages
+            // Calculate percentages, yield, scrap, weight, length
             const usedWidthPercent = coilWidth > 0 ? ((maxUsed / coilWidth) * 100).toFixed(2) : "0.00";
             const wastePercent = coilWidth > 0 ? ((minWaste / coilWidth) * 100).toFixed(2) : "0.00";
+            const materialYield = usedWidthPercent;
+            const scrapValue = wastePercent;
+            const totalWeight = (maxUsed * thickness * density) / 1000000;
+            const totalLength = 1; // For flat slitting, length is not defined by width; for demo, assume 1m
 
-            // Display results
+            // Slit details
+            let slitDetails = slits.map((slit, idx) => {
+                const qty = bestCombination[idx] || 0;
+                const width_m = slit.size / 1000;
+                const thickness_m = thickness / 1000;
+                const weight = width_m * thickness_m * qty * density; // kg for 1m length
+                return {
+                    size: slit.size,
+                    qty: qty,
+                    weight: weight
+                };
+            });
+
+            // Show results
             const resultsDiv = document.getElementById('results');
             if (bestCombination.length > 0) {
                 let html = `
                     <h3>Optimal Slitting Combination</h3>
                     <table class="summary-table">
-                        <tr>
-                            <th>Coil No.:</th>
-                            <td class="highlight">${coilNo ? coilNo : '-'}</td>
-                        </tr>
-                        <tr>
-                            <th>Original Coil Width:</th>
-                            <td class="highlight">${coilWidth} mm</td>
-                        </tr>
-                        <tr>
-                            <th>Total Trim:</th>
-                            <td>${totalTrim} mm</td>
-                        </tr>
-                        <tr>
-                            <th>Available Width:</th>
-                            <td>${availableWidth} mm</td>
-                        </tr>
-                        <tr>
-                            <th>Used Width:</th>
-                            <td class="highlight">${maxUsed} mm</td>
-                            <td><span style="color: #2a5d84;">(${usedWidthPercent}%)</span></td>
-                        </tr>
-                        <tr>
-                            <th>Waste:</th>
-                            <td class="highlight">${minWaste} mm</td>
-                            <td><span style="color: #b22222;">(${wastePercent}%)</span></td>
-                        </tr>
+                        <tr><th>Coil No.:</th><td class="highlight">${coilNo ? coilNo : '-'}</td></tr>
+                        <tr><th>Original Coil Width:</th><td class="highlight">${coilWidth} mm</td></tr>
+                        <tr><th>Total Trim:</th><td>${totalTrim} mm</td></tr>
+                        <tr><th>Available Width:</th><td>${availableWidth} mm</td></tr>
+                        <tr><th>Used Width:</th><td class="highlight">${maxUsed} mm (${usedWidthPercent}%)</td></tr>
+                        <tr><th>Waste:</th><td class="highlight">${minWaste} mm (${wastePercent}%)</td></tr>
+                        <tr><th>Material Yield:</th><td>${materialYield}%</td></tr>
+                        <tr><th>Scrap Value:</th><td>${scrapValue}%</td></tr>
+                        <tr><th>Total Weight (for 1m length):</th><td>${totalWeight.toFixed(2)} kg</td></tr>
                     </table>
                     <table class="details-table">
                         <thead>
                             <tr>
                                 <th>Slit Size (mm)</th>
                                 <th>Quantity</th>
+                                <th>Weight (kg, 1m length)</th>
                             </tr>
                         </thead>
                         <tbody>
                 `;
-                slits.forEach((slit, index) => {
+                slitDetails.forEach(detail => {
                     html += `<tr>
-                        <td>${slit.size}</td>
-                        <td>${bestCombination[index]}</td>
+                        <td>${detail.size}</td>
+                        <td>${detail.qty}</td>
+                        <td>${detail.weight.toFixed(2)}</td>
                     </tr>`;
                 });
                 html += `
@@ -209,11 +315,41 @@
                 `;
                 resultsDiv.innerHTML = html;
             } else {
-                resultsDiv.innerHTML = "No valid combination found";
+                resultsDiv.innerHTML = "<span class='error-message'>No valid combination found.</span>";
             }
         }
+
+        // CSV Export
+        function exportToCSV() {
+            const rows = [['Slit Size (mm)', 'Quantity', 'Weight (kg, 1m length)']];
+            document.querySelectorAll('.details-table tbody tr').forEach(row => {
+                const cells = Array.from(row.children).map(td => td.textContent);
+                rows.push(cells);
+            });
+            const csvContent = rows.map(row => row.join(',')).join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'slitting_plan.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Accessibility: Keyboard navigation for table
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Tab') {
+                const focusable = Array.from(document.querySelectorAll('input, button, [tabindex="0"]'));
+                const index = focusable.indexOf(document.activeElement);
+                if (e.shiftKey && index === 0) {
+                    focusable[focusable.length - 1].focus();
+                    e.preventDefault();
+                } else if (!e.shiftKey && index === focusable.length - 1) {
+                    focusable[0].focus();
+                    e.preventDefault();
+                }
+            }
+        });
     </script>
 </body>
 </html>
-
-
