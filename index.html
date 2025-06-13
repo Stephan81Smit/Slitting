@@ -33,14 +33,14 @@
             <thead>
                 <tr>
                     <th>Slit Size (mm)</th>
-                    <th>Max Quantity</th>
+                    <th>Max Quantity <span style="font-weight:normal;">(leave blank for unlimited)</span></th>
                     <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><input type="number" class="slit-size" value="196"></td>
-                    <td><input type="number" class="max-qty" value="3"></td>
+                    <td><input type="number" class="max-qty"></td>
                     <td><button onclick="removeRow(this)">Remove</button></td>
                 </tr>
             </tbody>
@@ -74,21 +74,33 @@
             const totalTrim = parseFloat(document.getElementById('totalTrim').value);
             const availableWidth = coilWidth - totalTrim;
 
-            // Collect slit sizes and max quantities
+            // Collect slit sizes and handle empty max quantities
             const slitInputs = Array.from(document.querySelectorAll('.slit-size'));
             const maxQtyInputs = Array.from(document.querySelectorAll('.max-qty'));
             
-            const slits = slitInputs.map((input, index) => ({
-                size: parseFloat(input.value) || 0,
-                maxQty: parseFloat(maxQtyInputs[index].value) || 0
-            })).filter(s => s.size > 0);
+            const slits = slitInputs.map((input, index) => {
+                const size = parseFloat(input.value) || 0;
+                const maxQtyInput = maxQtyInputs[index].value;
+                let maxQty;
+                if (maxQtyInput === "" || isNaN(parseFloat(maxQtyInput))) {
+                    // Unlimited: set to max possible that can fit
+                    maxQty = size > 0 ? Math.floor(availableWidth / size) : 0;
+                } else {
+                    maxQty = parseInt(maxQtyInput, 10);
+                }
+                return { size, maxQty };
+            }).filter(s => s.size > 0 && s.maxQty > 0);
 
-            // Optimization algorithm
+            if (slits.length === 0) {
+                document.getElementById('results').innerHTML = "Please enter at least one valid slit size.";
+                return;
+            }
+
+            // Optimization algorithm (brute force, suitable for small number of slit sizes)
             let bestCombination = [];
             let minWaste = availableWidth;
             let maxUsed = 0;
 
-            // Recursive function to try all combinations
             function tryCombinations(index = 0, current = [], usedWidth = 0) {
                 if (index === slits.length) {
                     const waste = availableWidth - usedWidth;
@@ -114,24 +126,23 @@
 
             // Display results
             const resultsDiv = document.getElementById('results');
-            if (bestCombination.length > 0) {
+            if (bestCombination.length > 0 && maxUsed > 0) {
                 let html = `<h3>Optimal Slitting Combination</h3>`;
                 html += `<p>Available Width: ${availableWidth}mm</p>`;
                 html += `<p>Used Width: ${maxUsed}mm</p>`;
                 html += `<p>Waste: ${minWaste}mm</p>`;
-                html += `<table><tr><th>Slit Size</th><th>Quantity</th></tr>`;
+                html += `<table><tr><th>Slit Size (mm)</th><th>Quantity</th></tr>`;
                 
                 slits.forEach((slit, index) => {
-                    html += `<tr><td>${slit.size}mm</td><td>${bestCombination[index]}</td></tr>`;
+                    html += `<tr><td>${slit.size}</td><td>${bestCombination[index]}</td></tr>`;
                 });
                 
                 html += `</table>`;
                 resultsDiv.innerHTML = html;
             } else {
-                resultsDiv.innerHTML = "No valid combination found";
+                resultsDiv.innerHTML = "No valid combination found.";
             }
         }
     </script>
 </body>
 </html>
-
