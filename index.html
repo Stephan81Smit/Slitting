@@ -64,6 +64,14 @@
       box-sizing: border-box;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
+    /* ## THIS IS THE NEW STYLE ## */
+    input[type="number"]:focus,
+    input[type="text"]:focus,
+    select:focus {
+      border-color: #28a745;
+      box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+      outline: none;
+    }
     .row {
       display: flex;
       gap: 16px;
@@ -110,7 +118,7 @@
     }
     input.invalid, select.invalid {
       border-color: #e74c3c !important;
-      box-shadow: 0 0 5px rgba(231,76,60,0.5);
+      box-shadow: 0 0 5px rgba(231,76,60,0.5) !important;
     }
     .input-group {
       position: relative;
@@ -290,7 +298,6 @@
         padding-bottom: 10px;
         margin-bottom: 15px;
       }
-      /* Hide all non-essential elements */
       .instructions,
       form > .segment:first-of-type,
       form > .segment:nth-of-type(2),
@@ -313,7 +320,7 @@
         border-bottom: 1px solid #ddd;
       }
       .results .details-table thead {
-        display: table-header-group; /* Repeat header on new pages */
+        display: table-header-group;
         background-color: #eee !important;
       }
       .results .summary-table tr {
