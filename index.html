@@ -112,20 +112,10 @@
       border-color: #e74c3c !important;
       box-shadow: 0 0 5px rgba(231,76,60,0.5);
     }
-    @media (max-width: 600px) {
-      .container, .footer-actions { padding: 12px; }
-      .row, .button-row { flex-direction: column; gap: 12px; }
-      .col { min-width: 100%; width: 100%; margin-bottom: 14px; }
-      input[type="number"], input[type="text"], select { font-size: 1em; padding: 16px 8px; }
-      button { font-size: 1em; padding: 16px 0; }
-      h1 { font-size: 1.6em; }
-      h2 { font-size: 1.2em; }
-    }
     .input-group {
       position: relative;
       margin-bottom: 12px;
     }
-    /* Radio button styles */
     .radio-group-label {
         font-weight: 600;
         margin-bottom: 6px;
@@ -135,7 +125,7 @@
       gap: 24px;
       align-items: center;
       padding: 10px 0;
-      height: 48px; /* Match height of other inputs */
+      height: 48px;
       box-sizing: border-box;
     }
     .radio-option {
@@ -153,7 +143,6 @@
       margin: 0;
       font-weight: normal;
     }
-    /* Custom styles for slitting calculator */
     #slitTable {
       width: 100%;
       border-collapse: collapse;
@@ -207,7 +196,7 @@
     }
     button.secondary {
       background: #6c757d;
-      margin: 0; /* Override default margin */
+      margin: 0;
     }
     button.secondary:hover {
       background: #5a6268;
@@ -216,7 +205,7 @@
       background: #f8f9fa;
       color: #dc3545;
       border: 1px solid #dc3545;
-      margin: 0; /* Override default margin */
+      margin: 0;
     }
     button.tertiary:hover {
       background: #dc3545;
@@ -267,6 +256,78 @@
     }
     .results .details-table tbody td {
       text-align: center;
+    }
+
+    /* Print Styles */
+    @media print {
+      @page {
+        size: A4;
+        margin: 0.75in;
+      }
+      body, html {
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        font-size: 10pt;
+      }
+      .container {
+        box-shadow: none;
+        border: none;
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 0;
+      }
+      h1 {
+        font-size: 18pt;
+        margin-bottom: 20px;
+      }
+      h2 {
+        font-size: 14pt;
+        text-align: left;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
+      /* Hide all non-essential elements */
+      .instructions,
+      form > .segment:first-of-type,
+      form > .segment:nth-of-type(2),
+      #slitForm > .segment:last-of-type > button,
+      .footer-actions {
+        display: none;
+      }
+      #results {
+        display: block !important;
+        background: none;
+        padding: 0;
+        margin-top: 0;
+      }
+      .results table {
+        width: 100%;
+        page-break-inside: avoid;
+      }
+      .results table th, .results table td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+      }
+      .results .details-table thead {
+        display: table-header-group; /* Repeat header on new pages */
+        background-color: #eee !important;
+      }
+      .results .summary-table tr {
+          page-break-inside: avoid;
+      }
+    }
+    @media (max-width: 600px) {
+      .container, .footer-actions { padding: 12px; }
+      .row, .button-row { flex-direction: column; gap: 12px; }
+      .col { min-width: 100%; width: 100%; margin-bottom: 14px; }
+      input[type="number"], input[type="text"], select { font-size: 1em; padding: 16px 8px; }
+      button { font-size: 1em; padding: 16px 0; }
+      h1 { font-size: 1.6em; }
+      h2 { font-size: 1.2em; }
     }
   </style>
 </head>
@@ -349,7 +410,7 @@
               <td><input type="number" class="slit-size" value="196" min="1" required aria-label="Slit Size"></td>
               <td><input type="number" class="min-qty" min="0" aria-label="Min Quantity"></td>
               <td><input type="number" class="max-qty" min="0" aria-label="Max Quantity"></td>
-              <td><button onclick="removeRow(this)">Remove</button></td>
+              <td><button type="button" onclick="removeRow(this)">Remove</button></td>
             </tr>
           </tbody>
         </table>
@@ -359,13 +420,12 @@
       <!-- Actions & Results Segment -->
       <div class="segment">
         <h2>Actions & Results</h2>
-        <button onclick="calculateOptimization()">Calculate Optimal Combination</button>
+        <button type="submit">Calculate Optimal Combination</button>
         <div id="results" class="results" style="display: none;" tabindex="0" aria-live="polite"></div>
       </div>
     </form>
   </div>
   
-  <!-- Footer Actions -->
   <div class="footer-actions">
       <div class="button-row">
         <button type="button" onclick="window.print()" class="secondary">Print to PDF</button>
@@ -376,23 +436,22 @@
 
 
   <script>
-    // Drag-and-drop functionality
     let draggedRow = null;
-    document.addEventListener('dragstart', function(e) {
+    document.addEventListener('dragstart', e => {
       if (e.target.classList.contains('drag-handle')) {
         draggedRow = e.target.closest('tr');
         draggedRow.classList.add('dragging');
       }
     });
-    document.addEventListener('dragend', function() {
+    document.addEventListener('dragend', () => {
       if (draggedRow) {
         draggedRow.classList.remove('dragging');
         draggedRow = null;
       }
     });
-    document.querySelector('#slitTable tbody').addEventListener('dragover', function(e) {
+    document.querySelector('#slitTable tbody').addEventListener('dragover', e => {
       e.preventDefault();
-      const afterElement = getDragAfterElement(this, e.clientY);
+      const afterElement = getDragAfterElement(e.currentTarget, e.clientY);
       const tbody = e.target.closest('tbody');
       if (afterElement == null) {
         tbody.appendChild(draggedRow);
@@ -413,9 +472,7 @@
       }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
-    // Add, remove, clear slit rows
     function addSlitRow() {
-      const tbody = document.querySelector('#slitTable tbody');
       const newRow = document.createElement('tr');
       newRow.setAttribute('draggable', 'true');
       newRow.innerHTML = `
@@ -423,9 +480,9 @@
         <td><input type="number" class="slit-size" min="1" required aria-label="Slit Size" placeholder="e.g. 250"></td>
         <td><input type="number" class="min-qty" min="0" aria-label="Min Quantity" placeholder="e.g. 1"></td>
         <td><input type="number" class="max-qty" min="0" aria-label="Max Quantity" placeholder="e.g. 5"></td>
-        <td><button onclick="removeRow(this)">Remove</button></td>
+        <td><button type="button" onclick="removeRow(this)">Remove</button></td>
       `;
-      tbody.appendChild(newRow);
+      document.querySelector('#slitTable tbody').appendChild(newRow);
     }
     function removeRow(btn) {
       if (document.querySelectorAll('#slitTable tbody tr').length > 1) {
@@ -440,24 +497,19 @@
           <td><input type="number" class="slit-size" min="1" required aria-label="Slit Size"></td>
           <td><input type="number" class="min-qty" min="0" aria-label="Min Quantity"></td>
           <td><input type="number" class="max-qty" min="0" aria-label="Max Quantity"></td>
-          <td><button onclick="removeRow(this)">Remove</button></td>
+          <td><button type="button" onclick="removeRow(this)">Remove</button></td>
         </tr>
       `;
       document.getElementById('results').style.display = 'none';
       validateInputs();
     }
 
-    // Real-time input validation
-    document.addEventListener('input', function(e) {
+    document.addEventListener('input', e => {
       if (e.target.matches('input')) validateInputs();
     });
     function validateInputs() {
       let isValid = true;
-      [
-        { id: 'coilWidth', min: 1 },
-        { id: 'totalTrim', min: 0 },
-        { id: 'materialThickness', min: 0.01 }
-      ].forEach(field => {
+      [{ id: 'coilWidth', min: 1 }, { id: 'totalTrim', min: 0 }, { id: 'materialThickness', min: 0.01 }].forEach(field => {
         const el = document.getElementById(field.id);
         const errorEl = document.getElementById(field.id + 'Error');
         const value = parseFloat(el.value);
@@ -465,32 +517,24 @@
           el.classList.add('invalid');
           if (errorEl) {
               errorEl.style.display = 'block';
-              errorEl.textContent = el.value.trim() === '' ? 'This field is required.' : `Invalid value (min ${field.min})`;
+              errorEl.textContent = el.value.trim() === '' ? 'This field is required.' : `Value must be at least ${field.min}.`;
           }
           isValid = false;
         } else {
           el.classList.remove('invalid');
-          if (errorEl) {
-            errorEl.style.display = 'none';
-            errorEl.textContent = '';
-          }
+          if (errorEl) errorEl.style.display = 'none';
         }
       });
       document.querySelectorAll('#slitTable tbody tr').forEach(row => {
         const slitSize = row.querySelector('.slit-size');
         const minQty = row.querySelector('.min-qty');
         const maxQty = row.querySelector('.max-qty');
-        slitSize.classList.remove('invalid');
-        minQty.classList.remove('invalid');
-        maxQty.classList.remove('invalid');
-
+        [slitSize, minQty, maxQty].forEach(el => el.classList.remove('invalid'));
         if (!slitSize.value || parseFloat(slitSize.value) < 1) {
           slitSize.classList.add('invalid');
           isValid = false;
         }
-        const minVal = parseFloat(minQty.value) || 0;
-        const maxVal = parseFloat(maxQty.value) || Infinity;
-        if (minVal > maxVal) {
+        if ((minQty.value || maxQty.value) && (parseFloat(minQty.value) > parseFloat(maxQty.value))) {
           minQty.classList.add('invalid');
           maxQty.classList.add('invalid');
           isValid = false;
@@ -511,50 +555,32 @@
       const totalTrim = parseFloat(document.getElementById('totalTrim').value);
       const availableWidth = coilWidth - totalTrim;
       const thickness = parseFloat(document.getElementById('materialThickness').value);
-      const density = parseFloat(document.querySelector('input[name="materialDensity"]:checked').value) * 1000; // Convert g/cm³ to kg/m³
-
-      const slits = Array.from(document.querySelectorAll('#slitTable tbody tr')).map(row => {
-        const size = parseFloat(row.querySelector('.slit-size').value);
-        const minQty = parseFloat(row.querySelector('.min-qty').value) || 0;
-        let maxQty = parseFloat(row.querySelector('.max-qty').value);
-        maxQty = isNaN(maxQty) ? Math.floor(availableWidth / size) : maxQty;
-        maxQty = Math.max(minQty, maxQty);
-        return { size, minQty, maxQty };
-      }).filter(s => s.size > 0);
-
-      let bestCombination = [];
-      let minWaste = availableWidth;
-
+      const density = parseFloat(document.querySelector('input[name="materialDensity"]:checked').value) * 1000;
+      const slits = Array.from(document.querySelectorAll('#slitTable tbody tr')).map(row => ({
+        size: parseFloat(row.querySelector('.slit-size').value),
+        minQty: parseFloat(row.querySelector('.min-qty').value) || 0,
+        maxQty: parseFloat(row.querySelector('.max-qty').value) || Math.floor(availableWidth / (parseFloat(row.querySelector('.slit-size').value) || 1))
+      })).filter(s => s.size > 0);
+      
       function findBestCombination(slits, target) {
           const memo = {};
           function solve(index, remainingWidth) {
               if (index === slits.length) return { combination: [], waste: remainingWidth };
               const memoKey = `${index},${remainingWidth}`;
               if (memo[memoKey]) return memo[memoKey];
-
               let bestResult = { combination: [], waste: Infinity };
               const slit = slits[index];
-              for (let q = slit.maxQty; q >= slit.minQty; q--) {
-                  const currentWidth = q * slit.size;
-                  if (currentWidth <= remainingWidth) {
-                      const result = solve(index + 1, remainingWidth - currentWidth);
-                      const currentWaste = result.waste;
-                      if (currentWaste < bestResult.waste) {
-                          bestResult = {
-                              combination: [q, ...result.combination],
-                              waste: currentWaste
-                          };
-                      }
+              const qMax = Math.min(slit.maxQty, Math.floor(remainingWidth / slit.size));
+              for (let q = qMax; q >= slit.minQty; q--) {
+                  const result = solve(index + 1, remainingWidth - (q * slit.size));
+                  if (result.waste < bestResult.waste) {
+                      bestResult = { combination: [q, ...result.combination], waste: result.waste };
                   }
               }
-               // Also consider not using this slit if minQty is 0
               if (slit.minQty === 0) {
                   const resultWithout = solve(index + 1, remainingWidth);
                   if (resultWithout.waste < bestResult.waste) {
-                      bestResult = {
-                          combination: [0, ...resultWithout.combination],
-                          waste: resultWithout.waste
-                      };
+                      bestResult = { combination: [0, ...resultWithout.combination], waste: resultWithout.waste };
                   }
               }
               return memo[memoKey] = bestResult;
@@ -563,21 +589,21 @@
       }
       
       const result = findBestCombination(slits, availableWidth);
-      bestCombination = result.combination;
-      minWaste = result.waste;
+      const bestCombination = result.combination;
+      const minWaste = result.waste;
       const maxUsed = availableWidth - minWaste;
-
       const usedWidthPercent = coilWidth > 0 ? ((maxUsed / coilWidth) * 100).toFixed(2) : "0.00";
       const wastePercent = coilWidth > 0 ? ((minWaste / coilWidth) * 100).toFixed(2) : "0.00";
       
-      let slitDetails = slits.map((slit, idx) => {
+      const slitDetails = slits.map((slit, idx) => {
         const qty = bestCombination[idx] || 0;
         const width_m = slit.size / 1000;
         const thickness_m = thickness / 1000;
-        const weight = width_m * thickness_m * 1 * density * qty;
-        return { size: slit.size, qty: qty, weight: weight };
+        const weightEach = width_m * thickness_m * 1 * density;
+        const totalRowWeight = weightEach * qty;
+        return { size: slit.size, qty: qty, weightEach: weightEach, totalWeight: totalRowWeight };
       });
-      const totalWeight = slitDetails.reduce((sum, s) => sum + s.weight, 0);
+      const totalWeight = slitDetails.reduce((sum, s) => sum + s.totalWeight, 0);
 
       if (bestCombination.length > 0 && maxUsed > 0) {
         let html = `
@@ -595,12 +621,11 @@
             </tbody>
           </table>
           <table class="details-table">
-            <thead><tr><th>Slit Size (mm)</th><th>Quantity</th><th>Weight (kg/m)</th></tr></thead>
-            <tbody>
-        `;
+            <thead><tr><th>Slit Size (mm)</th><th>Quantity</th><th>Weight/Slit (kg/m)</th><th>Total Weight (kg/m)</th></tr></thead>
+            <tbody>`;
         slitDetails.forEach(detail => {
           if (detail.qty > 0) {
-            html += `<tr><td>${detail.size}</td><td>${detail.qty}</td><td>${detail.weight.toFixed(3)}</td></tr>`;
+            html += `<tr><td>${detail.size}</td><td>${detail.qty}</td><td>${detail.weightEach.toFixed(3)}</td><td>${detail.totalWeight.toFixed(3)}</td></tr>`;
           }
         });
         html += `</tbody></table>`;
@@ -616,7 +641,8 @@
         alert('Please calculate a combination first.');
         return;
       }
-      const rows = [['Slit Size (mm)', 'Quantity', 'Weight (kg, 1m length)']];
+      const headers = ['Slit Size (mm)', 'Quantity', 'Weight/Slit (kg/m)', 'Total Weight (kg/m)'];
+      const rows = [headers];
       resultsTable.querySelectorAll('tbody tr').forEach(row => {
         const cells = Array.from(row.children).map(td => td.textContent);
         rows.push(cells);
@@ -624,9 +650,9 @@
       const csvContent = "data:text/csv;charset=utf-8," + rows.map(row => row.join(',')).join('\n');
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
       const coilNo = document.getElementById('coilNo').value.trim() || 'slitting_plan';
-      link.setAttribute('download', `${coilNo}.csv`);
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `${coilNo}_results.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
