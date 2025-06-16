@@ -64,7 +64,6 @@
       box-sizing: border-box;
       transition: border-color 0.2s, box-shadow 0.2s;
     }
-    /* ## THIS IS THE NEW STYLE ## */
     input[type="number"]:focus,
     input[type="text"]:focus,
     select:focus {
@@ -123,33 +122,6 @@
     .input-group {
       position: relative;
       margin-bottom: 12px;
-    }
-    .radio-group-label {
-        font-weight: 600;
-        margin-bottom: 6px;
-    }
-    .radio-group {
-      display: flex;
-      gap: 24px;
-      align-items: center;
-      padding: 10px 0;
-      height: 48px;
-      box-sizing: border-box;
-    }
-    .radio-option {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .radio-option input[type="radio"] {
-      width: auto;
-      margin: 0;
-      accent-color: #1b5fc6;
-      transform: scale(1.2);
-    }
-    .radio-option label {
-      margin: 0;
-      font-weight: normal;
     }
     #slitTable {
       width: 100%;
@@ -265,7 +237,6 @@
     .results .details-table tbody td {
       text-align: center;
     }
-
     /* Print Styles */
     @media print {
       @page {
@@ -381,17 +352,12 @@
           </div>
           <div class="col">
             <div class="input-group">
-              <div class="radio-group-label">Density (g/cm³)</div>
-              <div class="radio-group">
-                  <div class="radio-option">
-                      <input type="radio" id="density1" name="materialDensity" value="8.039" checked>
-                      <label for="density1">8.039</label>
-                  </div>
-                  <div class="radio-option">
-                      <input type="radio" id="density2" name="materialDensity" value="7.85">
-                      <label for="density2">7.85</label>
-                  </div>
-              </div>
+              <!-- ## THIS IS THE CHANGED SECTION ## -->
+              <label for="materialDensity">Density (g/cm³)</label>
+              <select id="materialDensity" name="materialDensity" aria-label="Material Density">
+                <option value="8.039" selected>8.039</option>
+                <option value="7.85">7.85</option>
+              </select>
             </div>
           </div>
         </div>
@@ -440,7 +406,6 @@
         <button type="button" onclick="clearAllSlits()" class="tertiary">Clear All Slits</button>
       </div>
   </div>
-
 
   <script>
     let draggedRow = null;
@@ -549,7 +514,7 @@
       });
       return isValid;
     }
-
+    
     function calculateOptimization() {
       const resultsDiv = document.getElementById('results');
       resultsDiv.style.display = 'block';
@@ -562,7 +527,8 @@
       const totalTrim = parseFloat(document.getElementById('totalTrim').value);
       const availableWidth = coilWidth - totalTrim;
       const thickness = parseFloat(document.getElementById('materialThickness').value);
-      const density = parseFloat(document.querySelector('input[name="materialDensity"]:checked').value) * 1000;
+      // ## THIS IS THE CHANGED JAVASCRIPT LINE ##
+      const density = parseFloat(document.getElementById('materialDensity').value) * 1000;
       const slits = Array.from(document.querySelectorAll('#slitTable tbody tr')).map(row => ({
         size: parseFloat(row.querySelector('.slit-size').value),
         minQty: parseFloat(row.querySelector('.min-qty').value) || 0,
@@ -611,7 +577,7 @@
         return { size: slit.size, qty: qty, weightEach: weightEach, totalWeight: totalRowWeight };
       });
       const totalWeight = slitDetails.reduce((sum, s) => sum + s.totalWeight, 0);
-
+      
       if (bestCombination.length > 0 && maxUsed > 0) {
         let html = `
           <h3>Optimal Slitting Combination</h3>
